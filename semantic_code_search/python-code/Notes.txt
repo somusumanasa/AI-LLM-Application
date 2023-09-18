@@ -1,0 +1,313 @@
+HOW TO Run the Application?
+
+- python bot.py
+
+
+C:/Users/sumanasasomu/AppData/Local/Programs/Python/Python311/python.exe "c:/Users/sumanasasomu/OneDrive - Microsoft/Documents/OfficeWork/AI-ML-Projects/FHLProjects/semantic_code_search/cli.py" -s "D:/off1/src/outlook/outllib" "Where is the authentication happening from"
+
+Careful while using (Fresh embeddings): C:/Users/sumanasasomu/AppData/Local/Programs/Python/Python311/python.exe "c:/Users/sumanasasomu/OneDrive - Microsoft/Documents/OfficeWork/AI-ML-Projects/FHLProjects/semantic_code_search/cli.py" -d true -s "D:/off1/src/outlook/outllib" "Where is the authentication happening from"
+
+eyJ0eXAiOiJKV1QiLCJyaCI6IjAuQWhzQXY0ajVjdkdHcjBHUnF5MTgwQkhiUjZSbTMyalp5djFMaHl2RzNkNEExcklhQUx3LiIsImFsZyI6IlJTMjU2Iiwia2lkIjoiLUtJM1E5bk5SN2JSb2Z4bWVab1hxYkhaR2V3In0.eyJhdWQiOiI2OGRmNjZhNC1jYWQ5LTRiZmQtODcyYi1jNmRkZGUwMGQ2YjIiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3YyLjAiLCJpYXQiOjE2ODg0NTg5MDksIm5iZiI6MTY4ODQ1ODkwOSwiZXhwIjoxNjg4NDYyOTAwLCJhaW8iOiJBWFFBaS84VEFBQUFmcmtlUUlGSTEyWnZwbFZvRVlXNjJyZnl5UUpLREdnbDJUMzdET1JRZkRUNWxJdTMrN1BLa3FqSzc3K3hGbXkxaEtBb2JxSjdUTFhSenR6bnU4TjRKZW9EcHVBcHZBbk5adXpYczFTWnBwa0dWSHZpaUFHdWJwSnJZRUpVZWFDZnlUOU1jS2twdXI2bDdBVEVtUmw2MWc9PSIsImF6cCI6IjY4ZGY2NmE0LWNhZDktNGJmZC04NzJiLWM2ZGRkZTAwZDZiMiIsImF6cGFjciI6IjAiLCJlbWFpbCI6InN1bWFuYXNhc29tdUBtaWNyb3NvZnQuY29tIiwibmFtZSI6IlN1bWFuYXNhIFNvbXUiLCJvaWQiOiJhMTg4ZWI3Yi04N2Q5LTQ0OGEtOGJlMi0zYzk1NDNlOGM1ZWYiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzdW1hbmFzYXNvbXVAbWljcm9zb2Z0LmNvbSIsInJoIjoiSSIsInNjcCI6ImFjY2VzcyIsInN1YiI6IjdxU1hCQkY2OTRtUDROQ09LNUhITVNFMldKbzhEcWRqcFdLRmRsVHNRb00iLCJ0aWQiOiI3MmY5ODhiZi04NmYxLTQxYWYtOTFhYi0yZDdjZDAxMWRiNDciLCJ1dGkiOiJRQTluRzBITmowU2tlSGQySjMwQkFBIiwidmVyIjoiMi4wIiwidmVyaWZpZWRfcHJpbWFyeV9lbWFpbCI6WyJzdW1hbmFzYXNvbXVAbWljcm9zb2Z0LmNvbSJdfQ.Eow6QiMLXyVoISWiMHCOPrNow_BrSwKrJDeIwwrrkrqN6bAlafZ1cnDtb4zrAC_OXEKmlJ5TktodN4BVeav0HxFCjxWnWYUJ16A8DsuV7gd0Gm29YQ5u3Fs5EwyFysQL-QVCL3q_pi_2yb4VhydCMGZQBBflJNWzCBA07oF4I87Tf2bdvkMuuLXS-A6U-xCnWpbd4XUuWTFgnHX4h-5SKkA5Brbew9Wq2WJHS_f83NxErcOWKsU3Lypqp3X8Nb-EZOl3vc_rPVqEAcxQIwgw5PBkEGVix1Cweyexb6-0snfxkzaF_HyhrMc4BRi2pt59NQrH-RjUMla2PUtMKo6lZw
+
+
+ # Add the current query to the context
+context.append({'role': 'User', 'content': query_text})
+
+# Generate the rephrased query
+query = rephrase(query_text)
+
+# Get the snippets
+snippets = _get_embeddings(path_to_repo, n_results, model_name_or_path, sub_project, batch_size, model, query)
+
+# Select the best snippet
+snippet = select(path_to_repo, snippets, query)
+
+# If no snippet is found, return an error message
+if snippet is None:
+    return "No snippet is found, please revise your question."
+
+# Add the selected snippet to the context
+context.append({'role': 'Assistant', 'content': "Snippet is here: {}".format(snippet)})
+
+# Explain the snippet
+answer = explain(query_text, snippet, context)
+
+
+
+import gzip
+import os
+import pickle
+import sys
+import torch
+from sentence_transformers import util
+from transformers import GPT2TokenizerFast
+import pkgutil
+from embed import embed
+from LLMClient import LLMClient
+from sentence_transformers import SentenceTransformer
+
+DELIMITER = '='
+tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+
+def _search(query_embedding, corpus_embeddings, functions, k=5):
+    # TODO: filtering by file extension
+    cos_scores = util.cos_sim(query_embedding, corpus_embeddings)[0]
+    top_results = torch.topk(cos_scores, k=min(k, len(cos_scores)), sorted=True)
+    out = []
+    for score, idx in zip(top_results[0], top_results[1]):
+        out.append((score, functions[idx]))
+    return out
+
+def do_query(args):
+    answer = query(args.query_text, args.path_to_repo, args.n_results, args.model_name_or_path, args.sub_project, args.batch_size)
+    print(answer)
+
+def query(query_text, path_to_repo="D:/off1/src", n_results=20, model_name_or_path = 'krlvi/sentence-msmarco-bert-base-dot-v5-nlpl-code_search_net', sub_project="D:/off1/src/outlook/outllib", batch_size = 32, context=None):
+    if not query_text:
+        return 'Please provide a query.'
+
+    model = SentenceTransformer(model_name_or_path)
+
+    sub_project = "D:/off1/src/outlook/outllib"
+
+    root = path_to_repo if sub_project is None else sub_project
+
+    print("Root is ---------", root)
+    print("sub_project is ---------", sub_project)
+    print("path_to_repo is ---------", path_to_repo)
+
+    print("Finding embeddings:", os.path.isfile(root + '/' + '.embeddings'))
+
+    if not os.path.isfile(root + '/' + '.embeddings'):
+            import os
+            import re
+            import gzip
+            import pickle
+            import pkgutil
+            from openai import LLMClient
+            from sentence_transformers import SentenceTransformer
+            from sklearn.neighbors import NearestNeighbors
+            import numpy as np
+            import torch
+
+            # Load the pre-trained model
+            model = SentenceTransformer('msmarco-distilbert-base-v3')
+
+            # Load the tokenizer
+            tokenizer = torch.hub.load('huggingface/pytorch-transformers', 'tokenizer', 'bert-base-uncased')
+
+            # Define the delimiter
+            DELIMITER = "========================"
+
+            def sem(path_to_repo, query_text, context):
+                # Define the parameters
+                n_results = 10
+                model_name_or_path = 'msmarco-distilbert-base-v3'
+                batch_size = 16
+                sub_project = None
+
+                def embed(model, path_to_repo, model_name_or_path, batch_size, sub_project):
+                    # Define the dataset
+                    dataset = {'embeddings': [], 'functions': [], 'model_name': model_name_or_path}
+
+                    # Define the files to embed
+                    files = []
+                    for root, _, filenames in os.walk(path_to_repo):
+                        for filename in filenames:
+                            if filename.endswith('.py'):
+                                files.append(os.path.join(root, filename))
+
+                    # Embed the files
+                    for i in range(0, len(files), batch_size):
+                        batch_files = files[i:i+batch_size]
+                        batch_functions = []
+                        for file in batch_files:
+                            with open(file, 'r') as f:
+                                code = f.read()
+                                functions = re.findall(r'^def\s+([a-zA-Z_][a-zA-Z_0-9]*)\s*\(', code, re.MULTILINE)
+                                batch_functions += functions
+                        batch_embeddings = model.encode(batch_functions, convert_to_tensor=True)
+                        dataset['embeddings'].append(batch_embeddings)
+                        dataset['functions'] += batch_functions
+
+                    # Concatenate the embeddings
+                    dataset['embeddings'] = torch.cat(dataset['embeddings'])
+
+                    # Save the dataset
+                    with gzip.open(path_to_repo + '/' + '.embeddings', 'wb') as f:
+                        f.write(pickle.dumps(dataset))
+
+                    return dataset
+
+                def _search(query_embedding, embeddings, functions, k=10):
+                    # Define the nearest neighbors model
+                    nn_model = NearestNeighbors(n_neighbors=k, algorithm='brute', metric='cosine')
+
+                    # Fit the model
+                    nn_model.fit(embeddings)
+
+                    # Find the nearest neighbors
+                    distances, indices = nn_model.kneighbors(query_embedding)
+
+                    # Return the nearest neighbors
+                    return [(distances[0][i], {'text': functions[index], 'file': None, 'line': None}) for i, index in enumerate(indices[0])]
+
+                def _get_embeddings(path_to_repo, n_results, model_name_or_path, sub_project, batch_size, model, query):
+                    with gzip.open(path_to_repo + '/' + '.embeddings', 'r') as f:
+                        dataset = pickle.loads(f.read())
+                        if dataset.get('model_name') != model_name_or_path:
+                            print('Model name mismatch. Regenerating embeddings.')
+                            dataset = embed(model, path_to_repo, model_name_or_path, batch_size, sub_project)
+                        query_embedding = model.encode(query, convert_to_tensor=True)
+
+                        snippets = _search(query_embedding, dataset.get(
+                            'embeddings'), dataset.get('functions'), k=n_results)
+
+                    return snippets
+
+
+                def select(path_to_repo, snippets, query):
+                    system = pkgutil.get_data(__name__, 'prompts/select.txt').decode('utf-8')
+                    number_of_tokens = gpt_token_count(system)
+                    prompt=""
+
+                    for i, snippet in enumerate(snippets):
+                        snippet[1]['repo'] = os.path.basename(path_to_repo)
+                        entry = "Repository: {}\nPath: {}\nIndex: {}\n\n{}\n{}\n".format(snippet[1]['repo'], snippet[1]['file'], i + 1, snippet[1]['text'], DELIMITER)
+                        new_count = number_of_tokens + gpt_token_count(entry)
+                        if new_count < 4000:
+                            prompt += entry
+                            number_of_tokens = new_count
+
+                    prompt += system.format(COUNT = len(snippets), QUERY = query, DELIMITER = DELIMITER)
+
+                    index_list = send(prompt, max_tokens=97)
+
+                    # Choosing the best match?
+                    index = int(index_list[0])
+
+                    if index > 0:
+                        return snippets[index-1][1]
+                    else:
+                        return None
+
+                def rephrase(query_text):
+                    system = pkgutil.get_data(__name__, 'prompts/rephrase.txt').decode('utf-8')
+                    system += '\nUser: {}\n'.format(query_text)
+                    system += 'Query: '
+
+                    return send(system)
+
+                def explain(query_text, snippet, context):
+                    grow_text = grow_snippet(snippet)
+                    prompt = build_explain_prompt(query_text, snippet, grow_text, context)
+
+                    max_tokens = 3800 - gpt_token_count(prompt) 
+
+                    if (max_tokens < 0):
+                        return "token count exceed limit"
+
+                    return send(prompt, max_tokens=3800 - gpt_token_count(prompt))
+
+
+                def grow(doc, snippet, grow_size=40):
+                    lines = doc.splitlines()
+                    snippet_start = snippet['line'] # adjust for zero-based indexing
+                    snippet_end = snippet_start + len(snippet['text'].splitlines()) - 1
+
+                    new_start = max(0, snippet_start - grow_size)
+                    new_end = min(len(lines) - 1, snippet_end + grow_size)
+                    new_text = "\n".join(lines[new_start:new_end + 1])
+
+                    if new_text != snippet['text']:
+                        return new_text
+                    else:
+                        return None
+
+
+                def build_explain_prompt(query_text, snippet, grow_text, context):
+                    system = pkgutil.get_data(__name__, 'prompts/explain.txt').decode('utf-8')
+                    prompt = ""
+                    prompt += system.format(PATH = snippet['file'], REPO = snippet['repo'], TEXT = grow_text)
+
+                    for chat in context:
+                        prompt += '{}: {}\n'.format(chat['role'], chat['content'])
+
+                    prompt += '\nUser: {}\n'.format(query_text)
+                    prompt += 'Assistant:'
+
+                    return prompt
+
+
+                def grow_snippet(snippet):
+                    doc = open(snippet['file'], "r").read()
+
+                    grow_size = 40
+
+                    while True:
+                        grown_text = grow(doc, snippet, grow_size)
+                        if grown_text is not None:
+                            token_count = gpt_token_count(grown_text)
+                            if token_count > 2000 or grow_size > 100:
+                                break
+                            else:
+                                grow_size += 10
+                        else:
+                            grown_text = snippet['text']
+                            break
+
+                    return grown_text
+
+
+                def gpt_token_count(text):
+                    return len(tokenizer(text)['input_ids'])
+
+
+                def send(prompt, max_tokens=1000):
+                    llm_client = LLMClient()
+                    model = 'dev-text-davinci-003'
+                    request_data = {
+                            "prompt":prompt,
+                            "max_tokens":max_tokens,
+                            "temperature":0.6,
+                            "top_p":1,
+                            "n":1,
+                            "stream":False,
+                            "logprobs":None,
+                            "stop":"\r\n"
+                    }
+
+                    response = llm_client.send_request(model, request_data)
+                    print("Response from LLM is ", response)                    
+                    return response['choices'][0]['text']
+
+
+                # Add the current query to the context
+                context.append({'role': 'User', 'content': query_text})
+
+                # Generate the rephrased query
+                query = rephrase(query_text)
+
+                # Get the snippets
+                snippets = _get_embeddings(path_to_repo, n_results, model_name_or_path, sub_project, batch_size, model, query)
+
+                # Select the best snippet
+                snippet = select(path_to_repo, snippets, query)
+
+                # If no snippet is found, return an error message
+                if snippet is None:
+                    return "No snippet is found, please revise your question."
+
+                # Add the selected snippet to the context
+                context.append({'role': 'Assistant', 'content': "Snippet is here: {}".format(snippet)})
+
+                # Explain the snippet
+                answer = explain(query_text, snippet, context)
+
+                # Build the result string
+                result = """
+            {}
+
+            Path: [{PATH1}](https://dev.azure.com/office/_git/Office?path={PATH2})
+
+            Snippet:

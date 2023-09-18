@@ -1,0 +1,11 @@
+sentence-transformers==2.2.2
+transformers>=3.0.2
+numpy
+scikit-learn
+gitpython
+tree_sitter
+tree_sitter_languages
+tree_sitter_builds
+prompt_toolkit
+msal
+panel
